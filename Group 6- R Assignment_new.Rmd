@@ -1,0 +1,188 @@
+---
+title: "Group 6 Assignment 1: R Programming"
+output: 
+  pdf_document: 
+    toc: yes
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo = F}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
+
+\newpage
+
+## R Markdown
+
+```{r echo=TRUE}
+library(ggpubr)
+library(tidyverse)
+library(janitor) #janitor helps us clean datasets
+library(here) # here helps us know where files are
+library(readxl)
+library(readr)
+library('formatR')
+```
+
+
+## Load data - CSV
+## This data is a COVID dataset and downloaded open data
+```{r}
+COVID19_Dataset <- readr::read_csv("https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv")
+```
+
+## Print the structure of your dataset
+```{r}
+str(COVID19_Dataset)
+```
+## List the variables in your dataset
+```{r}
+names(COVID19_Dataset)
+```
+## Print the top 15 rows of your dataset
+```{r}
+head(COVID19_Dataset, n = 15)
+```
+## Write a user defined function using any of the variables from the data set
+```{r}
+my_function <- function(x, y) {
+output <- COVID19_Dataset %>%  group_by(indicator, continent, year_week) %>%
+  summarize(mean_weekly_count = mean(weekly_count, na.rm = TRUE)) %>%
+  filter(indicator == x, year_week == y)
+return(output)
+}
+
+my_function('deaths', '2021-01')
+
+my_function('cases', '2020-12')
+```
+
+## Use data manipulation techniques and filter rows based on any logical criteria that exist in your dataset
+```{r}
+COVID19_Dataset_Canada = COVID19_Dataset %>% filter(COVID19_Dataset$weekly_count >= 1000, COVID19_Dataset$country == "Canada")
+
+head(COVID19_Dataset_Canada,n=10)
+```
+## Identify the dependent & independent variables and use reshaping techniques and create a new data frame by joining those variables from your dataset
+```{r}
+indept = data.frame(COVID19_Dataset$population, COVID19_Dataset$country, COVID19_Dataset$year_week)
+dept = data.frame(COVID19_Dataset$weekly_count)
+new_set = cbind.data.frame(indept, dept)
+head(new_set, n=10)
+```
+## Remove missing values in your dataset
+```{r}
+COVID19_Dataset_notnull = COVID19_Dataset[complete.cases(COVID19_Dataset), ]
+head(COVID19_Dataset_notnull, n=10)
+```
+## Identify and remove duplicated data in your dataset
+```{r}
+COVID19_Dataset_distinct = COVID19_Dataset %>% distinct() 
+head(COVID19_Dataset_distinct, n=10)
+```
+## Reorder multiple rows in descending order
+```{r}
+head(COVID19_Dataset %>% arrange(desc(COVID19_Dataset$country, COVID19_Dataset$continent)),n=10)
+```
+## Rename some of the column names in your dataset
+```{r}
+COVID19_Dataset_renamed = COVID19_Dataset %>% rename( Country_Name = country, Cotinent_Name=continent)
+head(COVID19_Dataset_renamed,n=10)
+```
+## Add new variables in your data frame by using a mathematical function (for e.g. – multiply an existing column by 2 and add it as a new variable to your data frame)
+```{r}
+COVID19_Dataset_added = COVID19_Dataset %>% mutate(count_by_population = cumulative_count/population)
+head(COVID19_Dataset_added,n=10)
+```
+## Create a training set using random number generator engine
+```{r}
+set.seed(1234)
+trainingset = COVID19_Dataset %>% sample_frac(0.05, replace = FALSE)
+head(trainingset,n=10)
+```
+
+## Print the summary statistics of your dataset
+```{r}
+COVID19_Dataset %>% group_by(COVID19_Dataset$continent) %>% summarise_if(is.numeric, median, na.rm = TRUE)
+```
+
+## Use any of the numerical variables from the dataset and perform the following statistical functions. 
+## Mean • Median • Mode • Range
+```{r echo=TRUE}
+mode(COVID19_Dataset$cumulative_count)
+range(COVID19_Dataset$cumulative_count)
+median(COVID19_Dataset$cumulative_count)
+mean(COVID19_Dataset$cumulative_count)
+```
+## Plot a scatter plot for any 2 variables in your dataset.
+```{r}
+
+my_function2 <- function(x) {
+output <- COVID19_Dataset %>%  group_by(indicator, continent, year_week) %>%
+  summarize(mean_weekly_count = mean(weekly_count, na.rm = TRUE)) %>%
+  filter(indicator == x)
+return(output)
+}
+
+Plot_data = my_function2('deaths')
+
+
+ggplot(data = Plot_data,aes(x = year_week, y = mean_weekly_count, 
+                      col = factor(Plot_data$continent)))+geom_point()
+
+```
+## Plot a bar plot for any 2 variables in your dataset
+```{r}
+
+plot_data2 = Plot_data %>% filter(year_week == "2020-12")
+ggplot(data = plot_data2, aes(continent, mean_weekly_count)) + geom_bar(stat = "identity", fill = "aquamarine4")
+```
+
+
+
+## Find the correlation between any 2 variables by applying least square linear regression model
+```{r echo=TRUE, message=FALSE, out.width='50%', tidy=TRUE}
+
+COVID19_Dataset_cases = 
+  COVID19_Dataset %>% filter(indicator == "cases", 
+                             year_week == '2020-12'|year_week =='2020-13'|year_week =='2020-14'|year_week == '2020-15'|year_week =='2020-16'|year_week =='2020-17'|year_week =='2020-18'|year_week =='2020-19'|year_week =='2020-20')
+
+COVID19_Dataset_cases_renamed = COVID19_Dataset_cases %>% rename(  indicator_count_cases = weekly_count)
+
+COVID19_Dataset_deaths = 
+  COVID19_Dataset %>% filter(indicator == "deaths", 
+                       year_week == '2020-12'|year_week =='2020-13'|year_week =='2020-14'|year_week == '2020-15'|year_week =='2020-16'|year_week =='2020-17'|year_week =='2020-18'|year_week =='2020-19'|year_week =='2020-20')
+
+COVID19_Dataset_deaths_renamed = COVID19_Dataset_deaths %>% rename(  indicator_count_deaths = weekly_count)
+
+new_data_set = cbind.data.frame(COVID19_Dataset_cases_renamed, COVID19_Dataset_deaths_renamed$indicator_count_deaths)
+
+X = new_data_set[,"indicator_count_cases"]
+Y = new_data_set[,"COVID19_Dataset_deaths_renamed$indicator_count_deaths"]
+correlation = cor(Y,X,method = "pearson")
+ggscatter(new_data_set, x = "indicator_count_cases", 
+          y = "COVID19_Dataset_deaths_renamed$indicator_count_deaths", 
+add = "reg.line",conf.int = TRUE, cor.coef = TRUE, cor.method = "pearson", 
+xlab = "indicator_count_cases", ylab = "indicator_count_deaths")
+
+
+```
+```
+
+## Provide a conclusion of your analysis if any in the .RMD file
+```{r}
+#According to our scatter plot, different continents have given different responses to Covid-19. For example, Oceania has the lowest death toll. On the flip side, Europe has completely different counts. It can easily be seen that, in the middle of Covid-19, Europe took some precautions, and decreased the deaths toll. Additionally, we can say that America has the highest death toll.
+
+#When we look at the correlation between cases and deaths, we can say that two variable depend on each other. They have a high correlation according to the correlation graphic.At the 12 th week of 2020, every case almost ended up with a death. But after a while, 20 th week of 2021, the death toll is lower than case counts. We can say that during these times, people has increased their immune system.
+```
+
+
+
